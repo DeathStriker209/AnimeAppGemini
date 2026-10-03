@@ -963,7 +963,8 @@ document.addEventListener('click', async (e) => {
           if (targetEp) {
             const watchRes = await fetch(`https://consumet.org{selectedProvider}/watch/${targetEp.id}`);
             const watchData = await watchRes.json();
-            streamUrl = watchData.sources?.find(src => src.quality === 'default' || src.quality === '1080p')?.url || watchData.sources?.?.url;
+          streamUrl = watchData.sources?.find(src => src.quality === 'default' || src.quality === '1080p')?.url || (watchData.sources && watchData.sources[0]?.url);
+
           }
         }
       }
@@ -974,7 +975,8 @@ document.addEventListener('click', async (e) => {
           const targetId = searchData.id;
           const srcRes = await fetch(`https://anify.tv{targetId}&episodeNumber=${n}&type=sub`);
           const srcData = await srcRes.json();
-          streamUrl = srcData.sources?.?.url;
+        streamUrl = srcData.sources?.[0]?.url;
+
         }
       }
 

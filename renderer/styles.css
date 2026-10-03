@@ -296,11 +296,44 @@ kbd { display: inline-block; min-width: 28px; padding: 3px 8px; border-radius: 5
 .p-title small { color: var(--muted); font-size: 13px; display: block; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pill { padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; border: 1px solid #5a6b85; }
 
+.p-source-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 6px;
+  -webkit-app-region: no-drag;
+}
+.p-source-box label {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.p-source-select {
+  background: transparent;
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+.p-source-select option {
+  background: #0e1624;
+  color: #e9eef6;
+}
+
 .p-body { display: grid; grid-template-columns: 1fr 300px; min-height: 0; }
 #player.list-hidden .p-body { grid-template-columns: 1fr 0; }
 #player.list-hidden .p-list { display: none; }
 .p-stage { position: relative; background: #000; min-width: 0; min-height: 0; overflow: hidden; }
 #video { position: absolute; inset: 0; width: 100%; height: 100%; background: #000; }
+.p-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: none; background: #000; z-index: 2; }
+.p-frame[hidden] { display: none !important; }
 video::cue { background: rgba(0, 0, 0, .55); font-size: 1.15em; }
 
 .p-controls {

@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; media-src 'self' file: blob: data: https:; connect-src * https: file: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+    content="default-src 'self' 'unsafe-inline' https:; img-src 'self' https: data: blob:; media-src 'self' file: blob: data: https:; frame-src * https: file: blob: data:; child-src * https: file: blob: data:; connect-src * https: file: blob:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:">
   <title>Anime Stream+</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -69,6 +69,27 @@
         <div><b>Now playing:</b> <span id="p-name"></span></div>
         <small id="p-sub"></small>
       </div>
+      <div class="p-source-box">
+        <label for="p-source-select">Source:</label>
+        <select id="p-source-select" class="p-source-select" tabindex="-1">
+          <option value="anikoto">Anikoto TV</option>
+          <option value="miruro">Miruro</option>
+          <option value="hianime">HiAnime</option>
+          <option value="animepahe">AnimePahe</option>
+          <option value="local">Local Video</option>
+        </select>
+      </div>
+      <button class="icon-btn" id="p-reload" tabindex="-1" title="Reload stream">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="p-ext" tabindex="-1" title="Open source in browser">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+        </svg>
+      </button>
       <span class="clock" id="p-clock">--:--</span>
       <span class="pill" id="p-subs-pill" hidden>SUBS</span>
       <button class="icon-btn" id="p-close" tabindex="-1" title="Close (Esc)">
@@ -80,6 +101,7 @@
     <div class="p-body">
       <div class="p-stage">
         <video id="video" preload="metadata"></video>
+        <iframe id="p-frame" class="p-frame" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen hidden></iframe>
         <div class="p-flash" id="p-flash"></div>
         <div class="p-msg" id="p-msg" hidden></div>
         <div class="p-controls">

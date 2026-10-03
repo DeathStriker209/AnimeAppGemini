@@ -46,13 +46,17 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: false, // ◄ Enables cross-origin streaming playback from external servers
+      webviewTag: true,
       experimentalFeatures: true
     }
   });
 
-  // Any link that tries to open a new window goes to the system browser instead
+  // Block ad popups originating from embedded streaming sources
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    if (/^https?:\/\/(anilist\.co|github\.com)/i.test(url)) {
+      shell.openExternal(url);
+    }
+    // Deny ad popups and popup windows from streaming providers
     return { action: 'deny' };
   });
 
@@ -72,6 +76,36 @@ function createWindow() {
   wc.on('zoom-changed', (_e, direction) => stepZoom(wc, direction === 'in' ? 1 : -1));
 
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+}
+
+// Configure session to strip X-Frame-Options and CSP headers to allow embedding anime streaming sources
+function setupStreamSession() {
+  const { session } = require('electron');
+
+  // Strip frame-blocking response headers (X-Frame-Options, frame-ancestors)
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = Object.assign({}, details.responseHeaders);
+    for (const key of Object.keys(responseHeaders)) {
+      const lower = key.toLowerCase();
+      if (lower === 'x-frame-options') {
+        delete responseHeaders[key];
+      } else if (lower === 'content-security-policy') {
+        responseHeaders[key] = responseHeaders[key].map((csp) =>
+          csp.replace(/frame-ancestors[^;]*(;|$)/gi, '')
+        );
+      }
+    }
+    callback({ responseHeaders });
+  });
+
+  // Provide a clean browser User-Agent so streaming hosts don't reject Electron
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    const requestHeaders = Object.assign({}, details.requestHeaders);
+    if (!requestHeaders['User-Agent'] || requestHeaders['User-Agent'].includes('Electron')) {
+      requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+    }
+    callback({ requestHeaders });
+  });
 }
 
 // Look for a subtitle file sitting next to the video with the same name
@@ -162,6 +196,7 @@ ipcMain.handle('open-external', async (_e, url) => {
 });
 
 app.whenReady().then(() => {
+  setupStreamSession();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

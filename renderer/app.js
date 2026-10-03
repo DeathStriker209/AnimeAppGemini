@@ -122,18 +122,75 @@ function openExternal(url) {
 }
 
 const DEFAULT_SOURCES = [
-  { name: 'Crunchyroll', url: 'https://www.crunchyroll.com/search?q={title}' },
-  { name: 'HiAnime', url: 'https://hianime.to/search?keyword={title}' },
-  { name: 'AnimePahe', url: 'https://animepahe.ru/api?m=search&q={title}' }
+  { name: 'Anikoto TV', url: 'https://anikototv.to/watch/{slug}?ep={ep}', id: 'anikoto' },
+  { name: 'Miruro', url: 'https://www.miruro.tv/watch?id={id}&ep={ep}', id: 'miruro' },
+  { name: 'HiAnime', url: 'https://hianime.to/search?keyword={title}', id: 'hianime' },
+  { name: 'AnimePahe', url: 'https://animepahe.ru/api?m=search&q={title}', id: 'animepahe' }
 ];
 
-const getSources = () => store.get('sources', DEFAULT_SOURCES);
-function sourceURL(src, m) {
+function toSlug(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+const getSources = () => {
+  const raw = store.get('sources', DEFAULT_SOURCES);
+  // Ensure Crunchyroll is removed everywhere as requested
+  const filtered = Array.isArray(raw)
+    ? raw.filter((s) => s && !/crunchyroll/i.test(s.name || '') && !/crunchyroll\.com/i.test(s.url || ''))
+    : DEFAULT_SOURCES;
+
+  // Make sure Anikoto TV and Miruro are always available
+  if (!filtered.some((s) => /anikoto/i.test(s.name || ''))) {
+    filtered.unshift({ name: 'Anikoto TV', url: 'https://anikototv.to/watch/{slug}?ep={ep}', id: 'anikoto' });
+  }
+  if (!filtered.some((s) => /miruro/i.test(s.name || ''))) {
+    filtered.splice(1, 0, { name: 'Miruro', url: 'https://www.miruro.tv/watch?id={id}&ep={ep}', id: 'miruro' });
+  }
+  return filtered;
+};
+
+function sourceURL(src, m, ep = 1) {
   const en = m.title?.english || m.title?.romaji || '', ro = m.title?.romaji || en;
-  return src.url
-    .replace(/{(title|query)}/gi, encodeURIComponent(en))
+  const slug = toSlug(en || ro);
+  return (src.url || '')
+    .replace(/{(title|query)}/gi, encodeURIComponent(en || ro))
     .replace(/{english}/gi, encodeURIComponent(en))
-    .replace(/{romaji}/gi, encodeURIComponent(ro));
+    .replace(/{romaji}/gi, encodeURIComponent(ro))
+    .replace(/{slug}/gi, slug)
+    .replace(/{id}/gi, String(m.id || ''))
+    .replace(/{ep}/gi, String(ep || 1));
+}
+
+function getEpisodeStreamUrl(sourceKey, m, ep = 1) {
+  const en = m.title?.english || m.title?.romaji || '';
+  const ro = m.title?.romaji || en;
+  const preferredTitle = en || ro;
+  const slug = toSlug(preferredTitle);
+  const id = m.id;
+
+  if (sourceKey === 'anikoto') {
+    return `https://anikototv.to/watch/${slug}?ep=${ep}`;
+  }
+  if (sourceKey === 'miruro') {
+    return `https://www.miruro.tv/watch?id=${id}&ep=${ep}`;
+  }
+  if (sourceKey === 'hianime') {
+    return `https://hianime.to/search?keyword=${encodeURIComponent(preferredTitle)}`;
+  }
+  if (sourceKey === 'animepahe') {
+    return `https://animepahe.ru/api?m=search&q=${encodeURIComponent(preferredTitle)}`;
+  }
+
+  const found = getSources().find((s) => (s.id && s.id === sourceKey) || s.name?.toLowerCase().includes(sourceKey));
+  if (found) {
+    return sourceURL(found, m, ep);
+  }
+  return `https://anikototv.to/watch/${slug}?ep=${ep}`;
 }
 
 const getHistory = () => store.get('history', {});
@@ -917,7 +974,9 @@ const VIEWS = {
       </button>
     `).join('');
 
-    const officialLinks = (m.externalLinks || []).filter((l) => l.url && /streaming/i.test(l.type || '')).map((l) => `
+    const officialLinks = (m.externalLinks || [])
+      .filter((l) => l.url && /streaming/i.test(l.type || '') && !/crunchyroll/i.test(l.site || '') && !/crunchyroll\.com/i.test(l.url || ''))
+      .map((l) => `
       <button class="btn" data-nav data-action="open-url" data-url="${esc(l.url)}" style="--accent:${esc(l.color || 'var(--accent)')}">
         ${esc(l.site)} ↗
       </button>

@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; img-src 'self' https: data: blob:; media-src 'self' file: blob:; connect-src https://graphql.anilist.co; style-src 'self' 'unsafe-inline'; script-src 'self'">
+    content="default-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; media-src 'self' file: blob: data: https:; connect-src * https: file: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
   <title>Anime Stream+</title>
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
   <div id="app">
     <header class="top">
@@ -22,7 +24,10 @@
       <div class="top-right">
         <label class="search">
           <input id="search" data-nav type="search" placeholder="Search anime" autocomplete="off" spellcheck="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-4-4" />
+          </svg>
         </label>
         <span class="clock" id="clock">--:--</span>
         <button class="avatar" id="avatar" data-nav data-go="settings" title="Settings">U</button>
@@ -33,13 +38,26 @@
 
     <footer class="bottom">
       <button class="btab" data-nav data-go="home">
-        <svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Home</button>
+        <svg viewBox="0 0 24 24">
+          <path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z" />
+        </svg>Home</button>
       <button class="btab" data-nav data-go="browse">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Browse</button>
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
+        </svg>Browse</button>
       <button class="btab" data-nav data-go="library">
-        <svg viewBox="0 0 24 24"><path d="M4 4v16M8 4v16M12 5l4 15M17 4l3 16"/></svg>My Library</button>
+        <svg viewBox="0 0 24 24">
+          <path d="M4 4v16M8 4v16M12 5l4 15M17 4l3 16" />
+        </svg>My Library</button>
       <button class="btab" data-nav data-go="settings">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+        </svg>Settings</button>
     </footer>
   </div>
 
@@ -54,7 +72,9 @@
       <span class="clock" id="p-clock">--:--</span>
       <span class="pill" id="p-subs-pill" hidden>SUBS</span>
       <button class="icon-btn" id="p-close" tabindex="-1" title="Close (Esc)">
-        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        <svg viewBox="0 0 24 24">
+          <path d="M6 6l12 12M18 6 6 18" />
+        </svg></button>
     </div>
 
     <div class="p-body">
@@ -67,32 +87,52 @@
             <div class="pbar-buf" id="pbar-buf"></div>
             <div class="pbar-fill" id="pbar-fill"></div>
             <div class="pbar-knob" id="pbar-knob"></div>
-            <div class="pbar-tip" id="pbar-tip"><video id="pv" muted preload="auto" class="off"></video><span id="pbar-time">0:00</span></div>
+            <div class="pbar-tip" id="pbar-tip"><video id="pv" muted preload="auto" class="off"></video><span
+                id="pbar-time">0:00</span></div>
           </div>
           <div class="p-row">
             <button class="icon-btn" id="b-play" tabindex="-1" title="Play / pause (Space)">
-              <svg class="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z" fill="currentColor"/></svg>
-              <svg class="i-pause" viewBox="0 0 24 24"><path d="M7 4h4v16H7zM14 4h4v16h-4z" fill="currentColor"/></svg>
+              <svg class="i-play" viewBox="0 0 24 24">
+                <path d="M7 4v16l13-8z" fill="currentColor" />
+              </svg>
+              <svg class="i-pause" viewBox="0 0 24 24">
+                <path d="M7 4h4v16H7zM14 4h4v16h-4z" fill="currentColor" />
+              </svg>
             </button>
             <button class="icon-btn skip" id="b-back" tabindex="-1" title="Back 10 seconds (←)">
-              <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4"/></svg><span>10</span></button>
+              <svg viewBox="0 0 24 24">
+                <path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4" />
+              </svg><span>10</span></button>
             <button class="icon-btn skip" id="b-fwd" tabindex="-1" title="Forward 10 seconds (→)">
-              <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4"/></svg><span>10</span></button>
+              <svg viewBox="0 0 24 24">
+                <path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4h-4" />
+              </svg><span>10</span></button>
             <span class="p-time" id="p-time">0:00 / 0:00</span>
             <div class="spacer"></div>
             <button class="icon-btn" id="b-prev" tabindex="-1" title="Previous episode (P)">
-              <svg viewBox="0 0 24 24"><path d="M6 5v14M19 5 9 12l10 7z" fill="currentColor"/></svg></button>
+              <svg viewBox="0 0 24 24">
+                <path d="M6 5v14M19 5 9 12l10 7z" fill="currentColor" />
+              </svg></button>
             <button class="icon-btn" id="b-next" tabindex="-1" title="Next episode (N)">
-              <svg viewBox="0 0 24 24"><path d="M18 5v14M5 5l10 7-10 7z" fill="currentColor"/></svg></button>
+              <svg viewBox="0 0 24 24">
+                <path d="M18 5v14M5 5l10 7-10 7z" fill="currentColor" />
+              </svg></button>
             <button class="icon-btn" id="b-mute" tabindex="-1" title="Mute (M)">
-              <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="i-waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg></button>
+              <svg viewBox="0 0 24 24">
+                <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
+                <path class="i-waves" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" />
+              </svg></button>
             <input type="range" id="vol" min="0" max="1" step="0.05" tabindex="-1" aria-label="Volume">
             <span class="p-quality" id="p-quality">—</span>
             <button class="icon-btn cc" id="b-cc" tabindex="-1" title="Subtitles (C)">CC</button>
             <button class="icon-btn" id="b-list" tabindex="-1" title="Episode list (E)">
-              <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+              <svg viewBox="0 0 24 24">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              </svg></button>
             <button class="icon-btn" id="b-full" tabindex="-1" title="Fullscreen (F)">
-              <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+              <svg viewBox="0 0 24 24">
+                <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+              </svg></button>
           </div>
         </div>
       </div>
@@ -108,4 +148,5 @@
 
   <script src="app.js"></script>
 </body>
+
 </html>

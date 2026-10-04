@@ -3,8 +3,18 @@ const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
 
+// Show a dialog if the main process crashes so user sees what's wrong
+process.on('uncaughtException', (err) => {
+  dialog.showErrorBox('AniKoto TV Fork — Startup Error', String(err?.stack || err));
+  app.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  dialog.showErrorBox('AniKoto TV Fork — Unhandled Error', String(reason?.stack || reason));
+});
+
 const VIDEO_EXT = ['mp4', 'mkv', 'webm', 'm4v', 'mov'];
 const SUB_EXT = ['.vtt', '.srt'];
+
 
 /* ---------- Zoom (Ctrl +/-, Ctrl 0, Ctrl + mouse wheel) ---------- */
 const ZOOM_STEPS = [0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];

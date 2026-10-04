@@ -121,11 +121,20 @@ function openExternal(url) {
   }
 }
 
+const SOURCE_LABELS = {
+  anikoto: 'Anikoto TV',
+  miruro: 'Miruro',
+  animepahe: 'AnimePahe',
+  animekai: 'AnimeKai',
+  hianime: 'HiAnime'
+};
+
 const DEFAULT_SOURCES = [
   { name: 'Anikoto TV', url: 'https://anikototv.to/watch/{slug}?ep={ep}', id: 'anikoto' },
   { name: 'Miruro', url: 'https://www.miruro.tv/watch?id={id}&ep={ep}', id: 'miruro' },
-  { name: 'HiAnime', url: 'https://hianime.to/search?keyword={title}', id: 'hianime' },
-  { name: 'AnimePahe', url: 'https://animepahe.ru/api?m=search&q={title}', id: 'animepahe' }
+  { name: 'AnimePahe', url: 'https://animepahe.ru/api?m=search&q={title}', id: 'animepahe' },
+  { name: 'AnimeKai', url: 'https://animekai.to/browser?keyword={title}', id: 'animekai' },
+  { name: 'HiAnime', url: 'https://hianime.to/search?keyword={title}', id: 'hianime' }
 ];
 
 function toSlug(str) {
@@ -144,12 +153,18 @@ const getSources = () => {
     ? raw.filter((s) => s && !/crunchyroll/i.test(s.name || '') && !/crunchyroll\.com/i.test(s.url || ''))
     : DEFAULT_SOURCES;
 
-  // Make sure Anikoto TV and Miruro are always available
+  // Make sure default streaming sources are available
   if (!filtered.some((s) => /anikoto/i.test(s.name || ''))) {
     filtered.unshift({ name: 'Anikoto TV', url: 'https://anikototv.to/watch/{slug}?ep={ep}', id: 'anikoto' });
   }
   if (!filtered.some((s) => /miruro/i.test(s.name || ''))) {
     filtered.splice(1, 0, { name: 'Miruro', url: 'https://www.miruro.tv/watch?id={id}&ep={ep}', id: 'miruro' });
+  }
+  if (!filtered.some((s) => /animepahe/i.test(s.name || ''))) {
+    filtered.splice(2, 0, { name: 'AnimePahe', url: 'https://animepahe.ru/api?m=search&q={title}', id: 'animepahe' });
+  }
+  if (!filtered.some((s) => /animekai/i.test(s.name || ''))) {
+    filtered.splice(3, 0, { name: 'AnimeKai', url: 'https://animekai.to/browser?keyword={title}', id: 'animekai' });
   }
   return filtered;
 };
@@ -179,11 +194,14 @@ function getEpisodeStreamUrl(sourceKey, m, ep = 1) {
   if (sourceKey === 'miruro') {
     return `https://www.miruro.tv/watch?id=${id}&ep=${ep}`;
   }
-  if (sourceKey === 'hianime') {
-    return `https://hianime.to/search?keyword=${encodeURIComponent(preferredTitle)}`;
-  }
   if (sourceKey === 'animepahe') {
     return `https://animepahe.ru/api?m=search&q=${encodeURIComponent(preferredTitle)}`;
+  }
+  if (sourceKey === 'animekai') {
+    return `https://animekai.to/browser?keyword=${encodeURIComponent(preferredTitle)}`;
+  }
+  if (sourceKey === 'hianime') {
+    return `https://hianime.to/search?keyword=${encodeURIComponent(preferredTitle)}`;
   }
 
   const found = getSources().find((s) => (s.id && s.id === sourceKey) || s.name?.toLowerCase().includes(sourceKey));
@@ -677,7 +695,7 @@ const VIEWS = {
 
     return {
       html: `
-        <div class="hero" id="hero">${heroHTML(state.heroes[0])}</div>
+        <div class="hero" id="hero" tabindex="0">${heroHTML(state.heroes[0])}</div>
         ${history.length ? rail('Continue watching', history.map(wideHTML).join(''), 'wide-rail') : ''}
         ${alWatching.length ? rail('Watching on AniList', alWatching.map((e) => cardHTML(e.media, { sub: `EP ${e.progress || 0}${e.media.episodes ? ' / ' + e.media.episodes : ''}` })).join('')) : ''}
         ${rail('Airing this season', airing, 'wide-rail')}
@@ -689,10 +707,12 @@ const VIEWS = {
         ${rail('All-time popular', d.popular.media.map((m) => cardHTML(m)).join(''))}
       `,
       after() {
+        initHeroSlider();
+        clearInterval(state.heroTimer);
         state.heroTimer = setInterval(() => {
           const hero = $('#hero');
           if (!hero || hero.contains(document.activeElement) || state.heroes.length < 2) return;
-          setHero((state.heroIndex + 1) % state.heroes.length);
+          setHero((state.heroIndex + 1) % state.heroes.length, 'from-right');
         }, 9000);
       }
     };
@@ -943,7 +963,11 @@ const VIEWS = {
     };
   },
 
-  async detail({ id }) {
+  async detail(params = {}) {
+    const id = Number(params?.id || state.detail?.id);
+    if (!id || isNaN(id)) {
+      throw new Error('No anime ID specified to load details.');
+    }
     const d = await gql(`query($id: Int) {
       Media(id: $id) {
         ...card
@@ -1008,13 +1032,7 @@ const VIEWS = {
                   🔀 ${hist ? `Fork Stream Ep ${resumeEp}` : 'Play via Anikoto Fork'}
                 </button>
                 <button class="btn" data-nav data-action="play-ep" data-id="${m.id}" data-ep="${resumeEp}">
-                  ▶ ${hist ? `Resume Ep ${resumeEp}` : 'Play Local/URL'}
-                </button>
-                <button class="btn" data-nav data-action="link-files" data-id="${m.id}">
-                  📁 ${linkedCount ? `Re-link Files (${linkedCount})` : 'Link Episode Files'}
-                </button>
-                <button class="btn" data-nav data-action="stream-url" data-id="${m.id}">
-                  🌐 Play Stream URL
+                  ▶ ${hist ? `Resume Ep ${resumeEp}` : 'Play / Choose Source'}
                 </button>
                 <button class="btn" data-nav data-action="list-menu" data-id="${m.id}">
                   ${listBtnLabel(m.id)}
@@ -1035,7 +1053,7 @@ const VIEWS = {
 
           <div class="d-section" style="margin-top: 32px;">
             <h2>Episodes</h2>
-            <div class="d-sub">${linkedCount ? `${linkedCount} local video(s) linked on disk` : 'No local files linked yet. Click "Link Episode Files" or click an episode to play/stream.'}</div>
+            <div class="d-sub">${linkedCount ? `${linkedCount} local video(s) linked on disk` : 'Select an episode below to choose your streaming source (Anikoto, Miruro, AnimePahe, AnimeKai, etc.).'}</div>
             <div id="ep-area">${episodesHTML(m)}</div>
           </div>
         </div>
@@ -1069,24 +1087,142 @@ async function browseQuery(vars) {
 function heroHTML(m) {
   if (!m) return '';
   const score = m.averageScore ? `★ ${(m.averageScore / 10).toFixed(1)}` : '';
+  const dots = state.heroes && state.heroes.length > 1 ? `
+    <div class="hero-dots">
+      ${state.heroes.map((h, idx) => `<button class="${idx === state.heroIndex ? 'on' : ''}" data-nav data-hero-dot="${idx}" aria-label="Slide ${idx + 1}"></button>`).join('')}
+    </div>
+  ` : '';
   return `
-    <img class="hero-bg" src="${esc(m.bannerImage || m.coverImage?.extraLarge || '')}" alt="">
+    <img class="hero-bg" src="${esc(m.bannerImage || m.coverImage?.extraLarge || '')}" alt="" draggable="false">
     <div class="hero-body">
       <div class="meta">${[FORMAT[m.format], m.seasonYear, score].filter(Boolean).join(' · ')}</div>
       <h1>${esc(titleOf(m))}</h1>
       <p>${esc(cleanDesc(m.description))}</p>
       <div class="btn-row">
-        <button class="btn primary" data-nav data-go="detail" data-id="${m.id}">Inspect Details</button>
+        <button class="btn primary" data-nav data-go="detail" data-id="${m.id}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Details
+        </button>
         <button class="btn" data-nav data-action="list-menu" data-id="${m.id}">${listBtnLabel(m.id)}</button>
       </div>
     </div>
+    ${dots}
   `;
 }
 
-function setHero(i) {
-  state.heroIndex = i;
+function setHero(i, direction = '') {
+  if (!state.heroes || !state.heroes.length) return;
+  state.heroIndex = (i + state.heroes.length) % state.heroes.length;
   const h = $('#hero');
-  if (h) h.innerHTML = heroHTML(state.heroes[i]);
+  if (h) {
+    h.classList.remove('from-right', 'from-left', 'dragging');
+    h.style.removeProperty('--drag');
+    if (direction) {
+      void h.offsetWidth; // Force reflow to re-trigger slide animation
+      h.classList.add(direction);
+    }
+    h.innerHTML = heroHTML(state.heroes[state.heroIndex]);
+  }
+}
+
+function initHeroSlider() {
+  const hero = $('#hero');
+  if (!hero || hero._sliderInitialized) return;
+  hero._sliderInitialized = true;
+
+  let startX = 0;
+  let startY = 0;
+  let deltaX = 0;
+  let isDown = false;
+  let isDragging = false;
+  let pointerId = null;
+
+  function resetHeroTimer() {
+    clearInterval(state.heroTimer);
+    if (state.heroes && state.heroes.length > 1) {
+      state.heroTimer = setInterval(() => {
+        const h = $('#hero');
+        if (!h || h.contains(document.activeElement) || isDown) return;
+        setHero(state.heroIndex + 1, 'from-right');
+      }, 9000);
+    }
+  }
+
+  hero.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button, [data-nav], .hero-dots')) return;
+    isDown = true;
+    isDragging = false;
+    deltaX = 0;
+    startX = e.clientX;
+    startY = e.clientY;
+    pointerId = e.pointerId;
+  });
+
+  hero.addEventListener('pointermove', (e) => {
+    if (!isDown) return;
+    const diffX = e.clientX - startX;
+    const diffY = e.clientY - startY;
+
+    if (!isDragging && Math.abs(diffX) > 6) {
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        isDragging = true;
+        hero.classList.add('dragging');
+        try { hero.setPointerCapture(pointerId); } catch {}
+      }
+    }
+
+    if (isDragging) {
+      deltaX = diffX;
+      hero.style.setProperty('--drag', `${deltaX}px`);
+    }
+  });
+
+  const endDrag = (e) => {
+    if (!isDown) return;
+    isDown = false;
+    try { hero.releasePointerCapture(pointerId); } catch {}
+
+    if (isDragging) {
+      isDragging = false;
+      hero.classList.remove('dragging');
+      hero.style.removeProperty('--drag');
+
+      if (deltaX < -40 && state.heroes.length > 1) {
+        setHero(state.heroIndex + 1, 'from-right');
+        resetHeroTimer();
+      } else if (deltaX > 40 && state.heroes.length > 1) {
+        setHero(state.heroIndex - 1, 'from-left');
+        resetHeroTimer();
+      }
+    } else {
+      // Direct click on cover (not on interactive buttons or dots)
+      if (!e.target.closest('button, [data-nav], .hero-dots')) {
+        const cur = state.heroes[state.heroIndex];
+        if (cur && cur.id) {
+          go('detail', { id: cur.id });
+        }
+      }
+    }
+  };
+
+  hero.addEventListener('pointerup', endDrag);
+  hero.addEventListener('pointercancel', () => {
+    isDown = false;
+    isDragging = false;
+    hero.classList.remove('dragging');
+    hero.style.removeProperty('--drag');
+  });
+
+  // Handle dot clicks via delegation on hero
+  hero.addEventListener('click', (e) => {
+    const dot = e.target.closest('[data-hero-dot]');
+    if (dot) {
+      e.stopPropagation();
+      const idx = Number(dot.dataset.heroDot);
+      const dir = idx >= state.heroIndex ? 'from-right' : 'from-left';
+      setHero(idx, dir);
+      resetHeroTimer();
+    }
+  });
 }
 
 function episodeCount(m) {
@@ -1215,25 +1351,25 @@ async function playEpisode(m, ep = 1, file = null, customUrl = null) {
   clearSubtitles();
 
   player.hidden = false;
-  video.src = P.srcUrl;
 
-  // Restore saved playback position
+  // Smart load: use HLS.js for .m3u8 streams, native src for everything else
+  loadVideoSrc(P.srcUrl);
+
+  // Restore saved playback position after metadata loads
   const hist = getHistory()[m.id];
   if (hist && hist.ep === ep && hist.time > 5 && hist.dur && hist.time < (hist.dur - 15)) {
-    video.currentTime = hist.time;
+    const restoreTime = hist.time;
+    video.addEventListener('loadedmetadata', function onMeta() {
+      video.removeEventListener('loadedmetadata', onMeta);
+      video.currentTime = restoreTime;
+    }, { once: true });
   }
-
-  video.play().catch((err) => {
-    console.warn('Playback play request:', err);
-  });
 
   // Check for sidecar subtitle file
   if (file?.sub && bridge?.readSubtitle) {
     try {
       const subData = await bridge.readSubtitle(file.sub);
-      if (subData?.text) {
-        applySubtitleText(subData.text);
-      }
+      if (subData?.text) applySubtitleText(subData.text);
     } catch (err) {
       console.warn('Subtitle read error:', err);
     }
@@ -1246,26 +1382,100 @@ async function playEpisode(m, ep = 1, file = null, customUrl = null) {
   player.focus();
 }
 
+/* =========================================================
+   HLS.js Smart Loader — handles .m3u8 and direct video URLs
+   ========================================================= */
+let hlsInstance = null;
+
+function loadVideoSrc(url) {
+  // Destroy any existing HLS instance
+  if (hlsInstance) {
+    hlsInstance.destroy();
+    hlsInstance = null;
+  }
+
+  if (!url) return;
+
+  const isHLS = url.includes('.m3u8') || url.includes('/hls/') || url.includes('playlist');
+
+  if (isHLS && typeof Hls !== 'undefined' && Hls.isSupported()) {
+    // Use HLS.js for manifest streams
+    hlsInstance = new Hls({
+      enableWorker: true,
+      lowLatencyMode: false,
+      backBufferLength: 90,
+      xhrSetup(xhr) {
+        xhr.setRequestHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+      }
+    });
+    hlsInstance.loadSource(url);
+    hlsInstance.attachMedia(video);
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+      // Pick best quality level
+      if (hlsInstance.levels?.length) {
+        const levelIdx = hlsInstance.levels.length - 1; // highest quality
+        hlsInstance.currentLevel = levelIdx;
+        const lvl = hlsInstance.levels[levelIdx];
+        const qualityEl = $('#p-quality');
+        if (qualityEl && lvl?.height) qualityEl.textContent = `${lvl.height}p`;
+      }
+      video.play().catch((e) => console.warn('HLS play:', e));
+    });
+    hlsInstance.on(Hls.Events.ERROR, (_e, data) => {
+      if (data.fatal) {
+        console.error('[HLS] Fatal error:', data);
+        showVideoError(`Stream error: ${data.details || 'HLS playback failed'}. Try another source.`);
+      }
+    });
+  } else if (isHLS && video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Native HLS support (Safari-based)
+    video.src = url;
+    video.play().catch((e) => console.warn('Native HLS play:', e));
+  } else {
+    // Direct video file (mp4, webm, etc.)
+    video.src = url;
+    video.play().catch((err) => console.warn('Playback play request:', err));
+  }
+}
+
+function showVideoError(msg) {
+  const msgEl = $('#p-msg');
+  if (msgEl) {
+    msgEl.hidden = false;
+    msgEl.innerHTML = `
+      <h3>Playback Failed</h3>
+      <p>${msg}</p>
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center">
+        <button class="btn" onclick="document.getElementById('p-close').click()">Close Player</button>
+        <button class="btn primary" onclick="openForkOverlay(P.media, P.ep)">🔀 Try Anikoto Fork</button>
+      </div>
+    `;
+  }
+}
+
 function showPlayPromptModal(m, ep) {
   modal.innerHTML = `
     <div class="modal-card" role="dialog" aria-modal="true">
       <h3>Play Episode ${ep}</h3>
       <div class="modal-sub">${esc(titleOf(m))}</div>
       <p style="color:var(--muted);font-size:14px;line-height:1.5;margin-bottom:18px;">
-        Choose how to watch Episode ${ep}:
+        Choose a source to watch Episode ${ep}:
       </p>
       <div class="modal-opts">
-        <button class="modal-opt" data-nav data-action="fork-anikoto" data-ep="${ep}">
+        <button class="modal-opt" data-nav data-action="fork-source" data-source="anikoto" data-ep="${ep}">
           <span class="mi">🔀</span> Anikoto TV Fork <small style="opacity:.7;font-size:11px;display:block;margin-top:2px;">Auto-extract stream • Best quality</small>
         </button>
-        <button class="modal-opt" data-nav data-action="link-and-play" data-ep="${ep}">
-          <span class="mi">📁</span> Select Local Video File
+        <button class="modal-opt" data-nav data-action="fork-source" data-source="miruro" data-ep="${ep}">
+          <span class="mi">⚡</span> Miruro <small style="opacity:.7;font-size:11px;display:block;margin-top:2px;">Fast multi-server stream</small>
         </button>
-        <button class="modal-opt" data-nav data-action="enter-stream-url" data-ep="${ep}">
-          <span class="mi">🌐</span> Enter Direct Stream URL
+        <button class="modal-opt" data-nav data-action="fork-source" data-source="animepahe" data-ep="${ep}">
+          <span class="mi">🌸</span> AnimePahe <small style="opacity:.7;font-size:11px;display:block;margin-top:2px;">Fast CDN • Quality streams</small>
         </button>
-        <button class="modal-opt" data-nav data-action="open-web-watch">
-          <span class="mi">↗</span> Open in Browser
+        <button class="modal-opt" data-nav data-action="fork-source" data-source="animekai" data-ep="${ep}">
+          <span class="mi">⚔️</span> AnimeKai <small style="opacity:.7;font-size:11px;display:block;margin-top:2px;">HD stream • animekai.to / animekai.ro</small>
+        </button>
+        <button class="modal-opt" data-nav data-action="fork-source" data-source="hianime" data-ep="${ep}">
+          <span class="mi">📺</span> HiAnime <small style="opacity:.7;font-size:11px;display:block;margin-top:2px;">Sub & Dub catalog</small>
         </button>
       </div>
       <div class="modal-foot">
@@ -1282,6 +1492,11 @@ function closePlayer() {
   saveProgress();
   P.open = false;
   video.pause();
+  // Destroy HLS.js instance if active
+  if (hlsInstance) {
+    hlsInstance.destroy();
+    hlsInstance = null;
+  }
   video.removeAttribute('src');
   video.load();
   player.hidden = true;
@@ -1451,15 +1666,12 @@ video.addEventListener('timeupdate', () => {
 });
 
 video.addEventListener('error', () => {
-  const msg = $('#p-msg');
-  if (msg) {
-    msg.hidden = false;
-    msg.innerHTML = `
-      <h3>Playback Failed</h3>
-      <p>Could not play video source. If this file uses HEVC (H.265) or AC3 audio, standard Chromium video player may not support it directly. Consider MP4 (H.264/AAC).</p>
-      <button class="btn" style="margin-top:14px" onclick="document.getElementById('p-close').click()">Close Player</button>
-    `;
-  }
+  const err = video.error;
+  const isNetwork = err?.code === 2;
+  const msg = isNetwork
+    ? 'Network error loading stream. The URL may have expired — try Anikoto Fork again.'
+    : 'Could not play this stream. It may use HLS encryption, or the URL expired. Try \'🔀 Anikoto Fork\' for a fresh link.';
+  showVideoError(msg);
 });
 
 // Seek bar interaction
@@ -1498,7 +1710,17 @@ document.addEventListener('click', async (e) => {
 
   // View navigation
   if (t.dataset.go) {
-    return go(t.dataset.go);
+    const params = {};
+    if (t.dataset.id) params.id = Number(t.dataset.id);
+    else if (t.getAttribute('data-id')) params.id = Number(t.getAttribute('data-id'));
+    if (t.dataset.go === 'detail' && !params.id) {
+      if (state.heroes && state.heroes[state.heroIndex]?.id) {
+        params.id = state.heroes[state.heroIndex].id;
+      } else if (state.detail?.id) {
+        params.id = state.detail.id;
+      }
+    }
+    return go(t.dataset.go, params);
   }
 
   // Genre / Tag filtering
@@ -1527,13 +1749,6 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
-  if (action === 'link-files') {
-    e.stopPropagation();
-    const m = mediaById.get(id) || state.detail;
-    if (m) await linkFiles(m);
-    return;
-  }
-
   if (action === 'play-ep' || action === 'play') {
     e.stopPropagation();
     const m = mediaById.get(id) || state.detail;
@@ -1550,14 +1765,6 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
-  if (action === 'stream-url') {
-    e.stopPropagation();
-    const m = mediaById.get(id) || state.detail;
-    const url = prompt('Enter direct video stream URL (MP4, WebM, HLS):');
-    if (url && m) playEpisode(m, 1, null, url.trim());
-    return;
-  }
-
   if (action === 'open-url') {
     e.stopPropagation();
     const url = t.dataset.url;
@@ -1565,12 +1772,13 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
-  if (action === 'fork-anikoto') {
+  if (action === 'fork-source' || action === 'fork-anikoto') {
     e.stopPropagation();
     const ep = Number(t.dataset.ep || 1);
+    const sourceKey = t.dataset.source || 'anikoto';
     closeModal();
     const m = state.detail || mediaById.get(id);
-    if (m) openForkOverlay(m, ep);
+    if (m) openForkOverlay(m, ep, sourceKey);
     return;
   }
 
@@ -1615,44 +1823,6 @@ document.addEventListener('click', async (e) => {
     store.set('sources', sources);
     toast('Source removed');
     render({ keepScroll: true });
-    return;
-  }
-
-  // Modal choice actions
-  if (action === 'link-and-play') {
-    const ep = Number(t.dataset.ep || 1);
-    closeModal();
-    const m = state.detail;
-    if (m && bridge?.pickVideos) {
-      const picked = await bridge.pickVideos();
-      if (picked && picked.length) {
-        const files = picked.map((f) => ({ ...f, ep: guessEp(f.name) }));
-        const lib = getLibrary();
-        lib[m.id] = { media: snap(m), files };
-        store.set('library', lib);
-        const epFile = files.find((f) => f.ep === ep) || files[0];
-        playEpisode(m, epFile.ep, epFile);
-      }
-    }
-    return;
-  }
-
-  if (action === 'enter-stream-url') {
-    const ep = Number(t.dataset.ep || 1);
-    closeModal();
-    const url = prompt(`Enter stream URL for Episode ${ep}:`);
-    if (url && state.detail) {
-      playEpisode(state.detail, ep, null, url.trim());
-    }
-    return;
-  }
-
-  if (action === 'open-web-watch') {
-    closeModal();
-    if (state.detail) {
-      const src = getSources()[0];
-      if (src) openExternal(sourceURL(src, state.detail));
-    }
     return;
   }
 
@@ -1969,10 +2139,13 @@ function isAnikotoOrEmbedHost(url) {
   );
 }
 
-async function openForkOverlay(m, ep) {
+async function openForkOverlay(m, ep, sourceKey = 'anikoto') {
+  forkState.sourceKey = sourceKey;
+  const srcName = SOURCE_LABELS[sourceKey] || (sourceKey.charAt(0).toUpperCase() + sourceKey.slice(1));
+
   if (!forkWebview) {
     // Fallback: show prompt for URL
-    const url = prompt(`Anikoto Fork: Enter the direct stream URL for ${titleOf(m)} Episode ${ep}:`);
+    const url = prompt(`${srcName} Fork: Enter the direct stream URL for ${titleOf(m)} Episode ${ep}:`);
     if (url) playEpisode(m, ep, null, url.trim());
     return;
   }
@@ -1989,7 +2162,17 @@ async function openForkOverlay(m, ep) {
   if (coverEl) coverEl.style.backgroundImage = `url('${m.coverImage?.extraLarge || m.coverImage?.large || ''}')`;
   if (titleEl) titleEl.textContent = titleOf(m);
   if (epEl) epEl.textContent = `Episode ${ep}`;
-  if (forkSubEl) forkSubEl.textContent = `${titleOf(m)} · Episode ${ep}`;
+  if (forkSubEl) forkSubEl.textContent = `${titleOf(m)} · Episode ${ep} (${srcName})`;
+
+  // Update header branding / status labels
+  const logoEl = document.querySelector('.fork-header .fork-logo');
+  if (logoEl) logoEl.innerHTML = `${esc(srcName.toUpperCase())}<span>FORK</span>`;
+  const nowEl = document.querySelector('.fork-header .fork-now');
+  if (nowEl) nowEl.textContent = `Extracting stream from ${srcName}…`;
+  const revealBtn = document.getElementById('fork-reveal-btn');
+  if (revealBtn) revealBtn.textContent = `Show ${srcName} Page`;
+  const fstep1 = document.getElementById('fstep-1');
+  if (fstep1) fstep1.innerHTML = `<span class="fstep-dot"></span>Loading ${esc(srcName)} page`;
 
   // Reset steps
   setForkStep(1, 'active');
@@ -2003,27 +2186,37 @@ async function openForkOverlay(m, ep) {
 
   forkOverlay.hidden = false;
 
-  // Build Anikoto URL
-  const anikotoUrl = getEpisodeStreamUrl('anikoto', m, ep);
-  if (forkUrlBar) forkUrlBar.textContent = anikotoUrl;
+  // Build target source URL
+  const targetUrl = getEpisodeStreamUrl(sourceKey, m, ep);
+  if (forkUrlBar) forkUrlBar.textContent = targetUrl;
 
-  // Set a timeout for 90 seconds
+  // Set a timeout for 45 seconds
   clearTimeout(forkState.timeout);
   forkState.timeout = setTimeout(() => {
     if (forkState.active && !forkState.streamUrl) {
-      setForkStatus('Timed out — try manual URL', 'error');
+      setForkStatus('Auto-extract failed — interact with page', 'error');
       setForkStep(3, 'error');
-      if (forkExtractMsg) forkExtractMsg.textContent = 'Could not auto-extract stream. Try manual URL.';
-      appendForkError('Auto-extraction timed out after 90 seconds. Click "Enter URL manually" to paste a direct stream link.');
+      if (forkExtractMsg) forkExtractMsg.textContent = 'Could not auto-detect stream. Use the page below manually.';
+      // Reveal the webview so user can manually interact
+      if (forkMask) forkMask.classList.add('transparent');
+      appendForkError(`Stream not auto-detected. You can interact with the ${srcName} page directly, or click 'Enter URL manually'.`);
     }
-  }, 90000);
+  }, 45000);
+
+  // Auto-reveal webview after 12s so user can see what's loading
+  setTimeout(() => {
+    if (forkState.active && !forkState.streamUrl) {
+      if (forkMask) forkMask.classList.add('transparent');
+      if (forkExtractMsg) forkExtractMsg.textContent = 'Page loaded — monitoring for stream…';
+    }
+  }, 12000);
 
   // Listen for network requests in the webview
   attachForkNetworkListener();
 
-  // Navigate the webview to Anikoto
+  // Navigate the webview to the source
   try {
-    forkWebview.src = anikotoUrl;
+    forkWebview.src = targetUrl;
   } catch (e) {
     console.warn('Fork webview src set failed:', e);
   }
@@ -2073,9 +2266,13 @@ function onForkStreamFound(url) {
 
   // Brief delay so user can see the "found" state, then launch native player
   setTimeout(() => {
-    const { media, ep } = forkState;
+    const { media, ep, sourceKey } = forkState;
     closeForkOverlay();
-    if (media) playEpisode(media, ep, null, url);
+    if (media) {
+      playEpisode(media, ep, null, url);
+      const sel = document.getElementById('p-source-select');
+      if (sel && sourceKey) sel.value = sourceKey;
+    }
   }, 900);
 }
 
@@ -2258,8 +2455,25 @@ const _origPlayEpisode = playEpisode;
 // Patch the source select to trigger fork mode
 document.getElementById('p-source-select')?.addEventListener('change', (e) => {
   const val = e.target.value;
-  if (val === 'anikoto' && P.media) {
-    // Re-open fork overlay for current playing
-    openForkOverlay(P.media, P.ep);
+  if (P.media) {
+    // Re-open fork overlay for current playing with the chosen source
+    openForkOverlay(P.media, P.ep, val);
+  }
+});
+
+// Reload stream button in player topbar
+document.getElementById('p-reload')?.addEventListener('click', () => {
+  if (P.media) {
+    const val = document.getElementById('p-source-select')?.value || 'anikoto';
+    openForkOverlay(P.media, P.ep, val);
+  }
+});
+
+// Open external watch in browser
+document.getElementById('p-ext')?.addEventListener('click', () => {
+  if (P.media) {
+    const val = document.getElementById('p-source-select')?.value || 'anikoto';
+    const url = getEpisodeStreamUrl(val, P.media, P.ep);
+    if (url) openExternal(url);
   }
 });

@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <!-- HLS.js: enables HLS (.m3u8) stream playback in Chromium native video element -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
 </head>
 
 <body>
@@ -143,9 +145,9 @@
         <select id="p-source-select" class="p-source-select" tabindex="-1">
           <option value="anikoto">Anikoto TV Fork</option>
           <option value="miruro">Miruro</option>
-          <option value="hianime">HiAnime</option>
           <option value="animepahe">AnimePahe</option>
-          <option value="local">Local Video</option>
+          <option value="animekai">AnimeKai</option>
+          <option value="hianime">HiAnime</option>
         </select>
       </div>
       <button class="icon-btn" id="p-reload" tabindex="-1" title="Reload stream">

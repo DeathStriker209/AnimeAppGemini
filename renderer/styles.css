@@ -1,22 +1,29 @@
 :root {
-  --bg: #0a101a;
-  --bg-2: #0e1624;
-  --panel: #131d2d;
-  --panel-2: #1a2639;
-  --line: #22314a;
-  --text: #e9eef6;
-  --muted: #8c9bb1;
-  --accent: #4aa8ff;
-  --accent-soft: rgba(74, 168, 255, .16);
-  --live: #e5484d;
-  --focus: #6fbcff;
+  --bg: #080e18;
+  --bg-2: #0b1422;
+  --panel: #101828;
+  --panel-2: #162135;
+  --line: #1e2f46;
+  --text: #e8edf6;
+  --muted: #7b8da8;
+  --accent: #3d9eff;
+  --accent-2: #7c3aed;
+  --accent-soft: rgba(61, 158, 255, .15);
+  --accent-glow: rgba(61, 158, 255, .3);
+  --live: #ef4444;
+  --focus: #60a5fa;
+  --green: #22c55e;
+  --green-soft: rgba(34, 197, 94, .15);
+  --fork-accent: #a855f7;
+  --fork-accent-soft: rgba(168, 85, 247, .15);
+  --fork-accent-glow: rgba(168, 85, 247, .35);
 }
 
 * { box-sizing: border-box; }
 html, body {
   margin: 0; height: 100%;
   background: var(--bg); color: var(--text);
-  font-family: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif;
+  font-family: 'Inter', "Segoe UI", system-ui, sans-serif;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
@@ -499,3 +506,251 @@ img.avatar.big { object-fit: cover; background: var(--panel-2); }
   background: var(--bg-2);
   color: var(--text);
 }
+
+/* ============================================================
+   Anikoto TV Fork — Stream Extraction Overlay
+   ============================================================ */
+
+#fork-overlay {
+  position: fixed; inset: 0; z-index: 800;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Inter', "Segoe UI", system-ui, sans-serif;
+}
+#fork-overlay[hidden] { display: none; }
+
+.fork-bg {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 30% 20%, rgba(168,85,247,.18) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 80%, rgba(61,158,255,.12) 0%, transparent 60%),
+              rgba(8,14,24,.92);
+  backdrop-filter: blur(18px);
+}
+
+.fork-panel {
+  position: relative; z-index: 1;
+  width: min(1100px, 96vw); max-height: 90vh;
+  background: linear-gradient(145deg, rgba(16,24,40,.95) 0%, rgba(11,20,34,.98) 100%);
+  border: 1px solid rgba(168,85,247,.2);
+  border-radius: 20px;
+  box-shadow: 0 0 60px rgba(168,85,247,.12), 0 30px 80px rgba(0,0,0,.6);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+
+/* Header */
+.fork-header {
+  display: flex; align-items: center; gap: 18px;
+  padding: 16px 22px;
+  background: linear-gradient(90deg, rgba(168,85,247,.08) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(168,85,247,.15);
+}
+
+.fork-logo {
+  font-weight: 900; font-size: 16px; letter-spacing: .06em;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #a855f7, #3d9eff);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.fork-logo span { display: block; font-size: 10px; letter-spacing: .12em; }
+
+.fork-title-wrap { flex: 1; min-width: 0; }
+.fork-now { font-weight: 700; font-size: 14px; color: var(--text); }
+.fork-sub { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.fork-status {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--fork-accent-soft);
+  border: 1px solid rgba(168,85,247,.25);
+  border-radius: 20px; padding: 6px 14px;
+  font-size: 12px; font-weight: 600; color: #d8b4fe;
+  white-space: nowrap;
+}
+.fork-status.done { background: var(--green-soft); border-color: rgba(34,197,94,.3); color: #86efac; }
+.fork-status.error { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.3); color: #fca5a5; }
+
+.fork-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(168,85,247,.3);
+  border-top-color: #a855f7;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.fork-status.done .fork-spinner { display: none; }
+.fork-status.error .fork-spinner { border-top-color: #ef4444; border-color: rgba(239,68,68,.3); }
+
+/* Body */
+.fork-body {
+  display: grid; grid-template-columns: 1fr 320px;
+  gap: 0; flex: 1; min-height: 0;
+}
+
+/* Browser panel */
+.fork-browser {
+  display: flex; flex-direction: column;
+  border-right: 1px solid rgba(168,85,247,.1);
+  min-height: 0;
+}
+
+.fork-browser-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: rgba(8,14,24,.7);
+  border-bottom: 1px solid var(--line);
+}
+
+.fork-dots { display: flex; gap: 6px; }
+.fork-dots span {
+  width: 11px; height: 11px; border-radius: 50%;
+}
+.fork-dots span:nth-child(1) { background: #ff5f57; }
+.fork-dots span:nth-child(2) { background: #febc2e; }
+.fork-dots span:nth-child(3) { background: #28c840; }
+
+.fork-url {
+  flex: 1; background: rgba(30,47,70,.6); border: 1px solid var(--line);
+  border-radius: 8px; padding: 5px 12px; font-size: 12px;
+  color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: monospace;
+}
+
+.fork-browser-actions { display: flex; gap: 6px; }
+.fork-act-btn {
+  width: 30px; height: 30px; border-radius: 6px;
+  background: rgba(255,255,255,.05); border: 1px solid var(--line);
+  color: var(--muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.fork-act-btn:hover { background: rgba(168,85,247,.15); color: #d8b4fe; border-color: rgba(168,85,247,.3); }
+.fork-act-btn svg { width: 14px; height: 14px; }
+
+.fork-webview-wrap {
+  position: relative; flex: 1; min-height: 400px; overflow: hidden;
+  background: #000;
+}
+
+/* Webview mask (shown while extracting) */
+.fork-webview-mask {
+  position: absolute; inset: 0; z-index: 10;
+  background: linear-gradient(180deg, rgba(8,14,24,.97) 0%, rgba(8,14,24,.95) 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px;
+  transition: opacity 0.4s;
+}
+.fork-webview-mask.transparent {
+  opacity: 0; pointer-events: none;
+}
+
+.fork-extract-anim {
+  position: relative; width: 80px; height: 80px;
+  display: flex; align-items: center; justify-content: center;
+}
+.fork-extract-ring {
+  position: absolute; border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--fork-accent);
+  animation: spin 1.4s linear infinite;
+}
+.fork-extract-ring:nth-child(1) { width: 80px; height: 80px; opacity: 1; }
+.fork-extract-ring.r2 { width: 60px; height: 60px; border-top-color: var(--accent); animation-duration: 1s; animation-direction: reverse; opacity: .7; }
+.fork-extract-ring.r3 { width: 40px; height: 40px; border-top-color: #22c55e; animation-duration: 0.7s; opacity: .5; }
+.fork-extract-icon {
+  width: 24px; height: 24px;
+  stroke: var(--fork-accent); fill: none; stroke-width: 1.5;
+  stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px var(--fork-accent-glow));
+}
+#fork-extract-msg {
+  color: var(--muted); font-size: 13px; font-weight: 500; margin: 0;
+}
+
+/* Info panel */
+.fork-info {
+  display: flex; flex-direction: column; gap: 0;
+  padding: 20px; background: rgba(8,14,24,.4);
+  overflow-y: auto;
+}
+
+.fork-anime-cover {
+  width: 100%; aspect-ratio: 2/3; border-radius: 12px;
+  background: var(--panel); overflow: hidden; margin-bottom: 16px;
+  max-height: 200px; object-fit: cover;
+  border: 1px solid var(--line);
+  background-size: cover; background-position: center top;
+  flex-shrink: 0;
+}
+
+.fork-anime-info { flex: 1; }
+.fork-anime-title {
+  font-size: 17px; font-weight: 800; line-height: 1.3;
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, var(--text), #a8b8d0);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.fork-anime-ep { font-size: 13px; color: var(--muted); margin-bottom: 20px; font-weight: 600; }
+
+/* Steps */
+.fork-steps { display: flex; flex-direction: column; gap: 10px; }
+.fork-step {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  transition: color 0.3s;
+}
+.fork-step.done { color: var(--green); }
+.fork-step.active { color: var(--text); }
+.fork-step.error-step { color: #fca5a5; }
+
+.fstep-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  background: var(--line);
+  transition: all 0.3s;
+  border: 2px solid var(--line);
+}
+.fork-step.done .fstep-dot { background: var(--green); border-color: var(--green); box-shadow: 0 0 8px rgba(34,197,94,.5); }
+.fork-step.active .fstep-dot {
+  background: var(--fork-accent); border-color: var(--fork-accent);
+  box-shadow: 0 0 10px var(--fork-accent-glow);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+.fork-step.error-step .fstep-dot { background: #ef4444; border-color: #ef4444; }
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: .8; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Success stream found banner */
+.fork-stream-found {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 16px; padding: 12px 14px;
+  background: var(--green-soft); border: 1px solid rgba(34,197,94,.25);
+  border-radius: 10px;
+  font-size: 13px; font-weight: 600; color: #86efac;
+  animation: slide-in 0.4s ease;
+}
+.fork-stream-found svg { width: 18px; height: 18px; stroke: var(--green); flex-shrink: 0; }
+
+.fork-stream-error {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-top: 12px; padding: 12px 14px;
+  background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25);
+  border-radius: 10px;
+  font-size: 12px; color: #fca5a5;
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Logo tweak for fork branding */
+.logo { font-weight: 900; font-size: 18px; line-height: .9; letter-spacing: .02em; }
+.logo span { display: block; font-size: 10px; letter-spacing: .12em; color: var(--fork-accent); }
+.logo.small { font-size: 14px; }
+

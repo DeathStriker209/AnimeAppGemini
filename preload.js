@@ -7,5 +7,8 @@ contextBridge.exposeInMainWorld('api', {
   fileExists: (p) => ipcRenderer.invoke('file-exists', p),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   anilistLogin: (clientId) => ipcRenderer.invoke('anilist-login', clientId),
-  onZoom: (cb) => ipcRenderer.on('zoom-changed', (_e, pct) => cb(pct))
+  onZoom: (cb) => ipcRenderer.on('zoom-changed', (_e, pct) => cb(pct)),
+  // Anikoto Fork: receives stream URLs sniffed from the webview partition
+  onForkStream: (cb) => ipcRenderer.on('fork-stream-detected', (_e, url) => cb(url))
 });
+

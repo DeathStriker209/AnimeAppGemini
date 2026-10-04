@@ -5,14 +5,17 @@
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'self' 'unsafe-inline' https:; img-src 'self' https: data: blob:; media-src 'self' file: blob: data: https:; frame-src * https: file: blob: data:; child-src * https: file: blob: data:; connect-src * https: file: blob:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:">
-  <title>Anime Stream+</title>
+  <title>AniKoto TV Fork</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
   <div id="app">
     <header class="top">
-      <div class="logo" aria-label="Anime Stream+">ANIME<span>STREAM+</span></div>
+      <div class="logo" aria-label="AniKoto TV Fork">ANIKOTO<span>TV FORK</span></div>
       <nav class="tabs">
         <button class="tab" data-nav data-go="home">Home</button>
         <button class="tab" data-nav data-go="schedule">Schedule</button>
@@ -61,10 +64,76 @@
     </footer>
   </div>
 
+  <!-- Anikoto TV Fork Sniff Overlay -->
+  <section id="fork-overlay" hidden>
+    <div class="fork-bg"></div>
+    <div class="fork-panel">
+      <div class="fork-header">
+        <div class="fork-logo">ANIKOTO<span>TV FORK</span></div>
+        <div class="fork-title-wrap">
+          <div class="fork-now">Extracting stream from Anikoto TV…</div>
+          <div class="fork-sub" id="fork-sub">Loading source page</div>
+        </div>
+        <div class="fork-status" id="fork-status">
+          <div class="fork-spinner"></div>
+          <span id="fork-status-txt">Connecting</span>
+        </div>
+        <button class="icon-btn" id="fork-cancel" title="Cancel">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <div class="fork-body">
+        <div class="fork-browser">
+          <div class="fork-browser-bar">
+            <div class="fork-dots"><span></span><span></span><span></span></div>
+            <div class="fork-url" id="fork-url">https://anikototv.to/…</div>
+            <div class="fork-browser-actions">
+              <button class="fork-act-btn" id="fork-show-browser" title="Show/hide Anikoto page">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="fork-webview-wrap" id="fork-webview-wrap">
+            <webview id="anikoto-webview"
+              partition="persist:anikoto"
+              allowpopups
+              webpreferences="contextIsolation=false,nodeIntegration=false"
+              style="width:100%;height:100%;border:none;"
+            ></webview>
+            <div class="fork-webview-mask" id="fork-webview-mask">
+              <div class="fork-extract-anim">
+                <div class="fork-extract-ring"></div>
+                <div class="fork-extract-ring r2"></div>
+                <div class="fork-extract-ring r3"></div>
+                <svg viewBox="0 0 24 24" class="fork-extract-icon"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              </div>
+              <p id="fork-extract-msg">Locating video stream…</p>
+              <button class="btn small" id="fork-reveal-btn">Show Anikoto Page</button>
+            </div>
+          </div>
+        </div>
+        <div class="fork-info">
+          <div class="fork-anime-cover" id="fork-anime-cover"></div>
+          <div class="fork-anime-info">
+            <div class="fork-anime-title" id="fork-anime-title">—</div>
+            <div class="fork-anime-ep" id="fork-anime-ep">Episode —</div>
+            <div class="fork-steps" id="fork-steps">
+              <div class="fork-step" id="fstep-1"><span class="fstep-dot"></span>Loading Anikoto page</div>
+              <div class="fork-step" id="fstep-2"><span class="fstep-dot"></span>Waiting for player</div>
+              <div class="fork-step" id="fstep-3"><span class="fstep-dot"></span>Extracting stream URL</div>
+              <div class="fork-step" id="fstep-4"><span class="fstep-dot"></span>Loading in native player</div>
+            </div>
+            <button class="btn" id="fork-manual-url" style="margin-top:18px;">Enter URL manually</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Player overlay -->
   <section id="player" hidden tabindex="-1">
     <div class="p-top">
-      <div class="logo small">ANIME<span>STREAM+</span></div>
+      <div class="logo small">ANIKOTO<span>TV FORK</span></div>
       <div class="p-title">
         <div><b>Now playing:</b> <span id="p-name"></span></div>
         <small id="p-sub"></small>
@@ -72,7 +141,7 @@
       <div class="p-source-box">
         <label for="p-source-select">Source:</label>
         <select id="p-source-select" class="p-source-select" tabindex="-1">
-          <option value="anikoto">Anikoto TV</option>
+          <option value="anikoto">Anikoto TV Fork</option>
           <option value="miruro">Miruro</option>
           <option value="hianime">HiAnime</option>
           <option value="animepahe">AnimePahe</option>

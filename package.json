@@ -1,8 +1,8 @@
 {
-  "name": "anime-stream-plus",
-  "productName": "Anime Stream+",
-  "version": "1.0.0",
-  "description": "Desktop anime browser and player with keyboard navigation",
+  "name": "anikoto-tv-fork",
+  "productName": "AniKoto TV Fork",
+  "version": "2.0.0",
+  "description": "AniKoto TV Fork — Desktop anime player with stream extraction from Anikoto TV backend",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -13,8 +13,8 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.animestreamplus.app",
-    "productName": "Anime Stream+",
+    "appId": "com.anikototvfork.app",
+    "productName": "AniKoto TV Fork",
     "files": [
       "main.js",
       "preload.js",
@@ -26,8 +26,8 @@
       "icon": "assets/icon.ico"
     },
     "portable": {
-      "artifactName": "AnimeStreamPlus.exe"
+      "artifactName": "AniKotoTVFork.exe"
     }
   },
-  "author": "Anime Stream+"
+  "author": "AniKoto TV Fork"
 }

@@ -106,7 +106,53 @@ function setupStreamSession() {
     }
     callback({ requestHeaders });
   });
+
+  // ── Anikoto Fork: sniff stream URLs from the 'persist:anikoto' webview partition ──
+  const forkPartition = session.fromPartition('persist:anikoto');
+
+  // Fake browser UA for Anikoto partition
+  forkPartition.webRequest.onBeforeSendHeaders((details, callback) => {
+    const requestHeaders = Object.assign({}, details.requestHeaders);
+    requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+    requestHeaders['Referer'] = 'https://anikototv.to/';
+    requestHeaders['Origin'] = 'https://anikototv.to';
+    callback({ requestHeaders });
+  });
+
+  // Strip CSP/X-Frame-Options from anikoto partition responses
+  forkPartition.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = Object.assign({}, details.responseHeaders);
+    for (const key of Object.keys(responseHeaders)) {
+      const lower = key.toLowerCase();
+      if (lower === 'x-frame-options') delete responseHeaders[key];
+      else if (lower === 'content-security-policy') {
+        responseHeaders[key] = responseHeaders[key].map((csp) =>
+          csp.replace(/frame-ancestors[^;]*(;|$)/gi, '')
+        );
+      }
+    }
+    callback({ responseHeaders });
+  });
+
+  // Intercept resource requests in the fork partition to sniff stream URLs
+  const STREAM_PATTERNS = /\.(m3u8|mp4|webm|ts)(\?|$|&|#)/i;
+  const STREAM_PATHS = /\/(hls|stream|manifest|video|playlist)\//i;
+
+  forkPartition.webRequest.onBeforeRequest((details, callback) => {
+    const url = details.url || '';
+    if (STREAM_PATTERNS.test(url) || STREAM_PATHS.test(url)) {
+      // Notify all renderer windows
+      const wins = require('electron').BrowserWindow.getAllWindows();
+      wins.forEach((win) => {
+        if (!win.isDestroyed()) {
+          win.webContents.send('fork-stream-detected', url);
+        }
+      });
+    }
+    callback({});
+  });
 }
+
 
 // Look for a subtitle file sitting next to the video with the same name
 function findSidecarSub(videoPath) {

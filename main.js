@@ -5,11 +5,11 @@ const { pathToFileURL } = require('url');
 
 // Show a dialog if the main process crashes so user sees what's wrong
 process.on('uncaughtException', (err) => {
-  dialog.showErrorBox('AniKoto TV Fork — Startup Error', String(err?.stack || err));
+  dialog.showErrorBox('Anime Stream+ — Startup Error', String(err?.stack || err));
   app.exit(1);
 });
 process.on('unhandledRejection', (reason) => {
-  dialog.showErrorBox('AniKoto TV Fork — Unhandled Error', String(reason?.stack || reason));
+  dialog.showErrorBox('Anime Stream+ — Unhandled Error', String(reason?.stack || reason));
 });
 
 const VIDEO_EXT = ['mp4', 'mkv', 'webm', 'm4v', 'mov'];

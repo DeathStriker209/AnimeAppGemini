@@ -129,6 +129,22 @@ const SOURCE_LABELS = {
   hianime: 'HiAnime'
 };
 
+const SOURCE_ICONS = {
+  anikoto: '📡',
+  miruro: '⚡',
+  animepahe: '🌸',
+  animekai: '⚔️',
+  hianime: '📺'
+};
+
+const SOURCE_DESCS = {
+  anikoto: 'Auto stream extraction · best quality',
+  miruro: 'Fast multi-server · clean player',
+  animepahe: 'Fast CDN · quality streams',
+  animekai: 'HD stream · animekai.to',
+  hianime: 'Sub & Dub catalog'
+};
+
 const DEFAULT_SOURCES = [
   { name: 'Anikoto TV', url: 'https://anikototv.to/watch/{slug}?ep={ep}', id: 'anikoto' },
   { name: 'Miruro', url: 'https://www.miruro.tv/watch?id={id}&ep={ep}', id: 'miruro' },
@@ -1028,11 +1044,9 @@ const VIEWS = {
               </div>
               <p class="d-desc">${esc(desc)}</p>
               <div class="btn-row">
-                <button class="btn primary" data-nav data-action="fork-anikoto" data-id="${m.id}" data-ep="${resumeEp}">
-                  🔀 ${hist ? `Fork Stream Ep ${resumeEp}` : 'Play via Anikoto Fork'}
-                </button>
-                <button class="btn" data-nav data-action="play-ep" data-id="${m.id}" data-ep="${resumeEp}">
-                  ▶ ${hist ? `Resume Ep ${resumeEp}` : 'Play / Choose Source'}
+                <button class="btn primary" data-nav data-action="play-ep" data-id="${m.id}" data-ep="${resumeEp}">
+                  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="16" height="16"><path d="M7 4v16l13-8z"/></svg>
+                  ${hist ? `Resume Ep ${resumeEp}` : 'Play Episode 1'}
                 </button>
                 <button class="btn" data-nav data-action="list-menu" data-id="${m.id}">
                   ${listBtnLabel(m.id)}
@@ -1447,36 +1461,29 @@ function showVideoError(msg) {
       <p>${msg}</p>
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center">
         <button class="btn" onclick="document.getElementById('p-close').click()">Close Player</button>
-        <button class="btn primary" onclick="openForkOverlay(P.media, P.ep)">🔀 Try Anikoto Fork</button>
+        <button class="btn primary" onclick="if(P.media) showPlayPromptModal(P.media, P.ep);">Try Another Source</button>
       </div>
     `;
   }
 }
 
 function showPlayPromptModal(m, ep) {
+  const sourceKeys = Object.keys(SOURCE_LABELS);
   modal.innerHTML = `
-    <div class="modal-card" role="dialog" aria-modal="true">
+    <div class="modal-card src-picker" role="dialog" aria-modal="true" aria-label="Choose streaming source">
       <h3>Play Episode ${ep}</h3>
       <div class="modal-sub">${esc(titleOf(m))}</div>
-      <p style="color:var(--muted);font-size:14px;line-height:1.5;margin-bottom:18px;">
-        Choose a source to watch Episode ${ep}:
-      </p>
-      <div class="modal-opts">
-        <button class="modal-opt" data-nav data-action="fork-source" data-source="anikoto" data-ep="${ep}">
-          <span class="mi">🔀</span> Anikoto TV Fork <small style="opacity:.7;font-size:11px;display:block;margin-top:2px;">Auto-extract stream • Best quality</small>
-        </button>
-        <button class="modal-opt" data-nav data-action="fork-source" data-source="miruro" data-ep="${ep}">
-          <span class="mi">⚡</span> Miruro <small style="opacity:.7;font-size:11px;display:block;margin-top:2px;">Fast multi-server stream</small>
-        </button>
-        <button class="modal-opt" data-nav data-action="fork-source" data-source="animepahe" data-ep="${ep}">
-          <span class="mi">🌸</span> AnimePahe <small style="opacity:.7;font-size:11px;display:block;margin-top:2px;">Fast CDN • Quality streams</small>
-        </button>
-        <button class="modal-opt" data-nav data-action="fork-source" data-source="animekai" data-ep="${ep}">
-          <span class="mi">⚔️</span> AnimeKai <small style="opacity:.7;font-size:11px;display:block;margin-top:2px;">HD stream • animekai.to / animekai.ro</small>
-        </button>
-        <button class="modal-opt" data-nav data-action="fork-source" data-source="hianime" data-ep="${ep}">
-          <span class="mi">📺</span> HiAnime <small style="opacity:.7;font-size:11px;display:block;margin-top:2px;">Sub & Dub catalog</small>
-        </button>
+      <div class="modal-opts src-opts">
+        ${sourceKeys.map((key) => `
+          <button class="modal-opt src-opt" data-nav data-action="fork-source" data-source="${key}" data-ep="${ep}">
+            <span class="src-icon">${SOURCE_ICONS[key] || '▶'}</span>
+            <span class="src-details">
+              <span class="src-name">${esc(SOURCE_LABELS[key])}</span>
+              <span class="src-desc">${esc(SOURCE_DESCS[key] || '')}</span>
+            </span>
+            <span class="src-arrow">›</span>
+          </button>
+        `).join('')}
       </div>
       <div class="modal-foot">
         <button class="btn" data-nav data-close>Cancel</button>
@@ -1669,8 +1676,8 @@ video.addEventListener('error', () => {
   const err = video.error;
   const isNetwork = err?.code === 2;
   const msg = isNetwork
-    ? 'Network error loading stream. The URL may have expired — try Anikoto Fork again.'
-    : 'Could not play this stream. It may use HLS encryption, or the URL expired. Try \'🔀 Anikoto Fork\' for a fresh link.';
+    ? 'Network error loading stream. The URL may have expired — try reloading or pick another source.'
+    : 'Could not play this stream. It may use unsupported encryption. Try reloading or picking a different source.';
   showVideoError(msg);
 });
 
@@ -1778,7 +1785,7 @@ document.addEventListener('click', async (e) => {
     const sourceKey = t.dataset.source || 'anikoto';
     closeModal();
     const m = state.detail || mediaById.get(id);
-    if (m) openForkOverlay(m, ep, sourceKey);
+    if (m) startSilentExtraction(m, ep, sourceKey);
     return;
   }
 
@@ -2051,23 +2058,18 @@ Promise.race([alInit(), sleep(2500)]).finally(() => {
 });
 
 /* =========================================================
-   Anikoto TV Fork — Stream Extraction Engine
+   Silent Background Stream Extraction Engine
+   Replaces the old full-screen fork overlay — the webview
+   runs completely off-screen, only a slim status strip in
+   the player top-bar is shown while extracting.
    ========================================================= */
 
-const forkOverlay = document.getElementById('fork-overlay');
 const forkWebview = document.getElementById('anikoto-webview');
-const forkMask = document.getElementById('fork-webview-mask');
-const forkUrlBar = document.getElementById('fork-url');
-const forkStatusEl = document.getElementById('fork-status');
-const forkStatusTxt = document.getElementById('fork-status-txt');
-const forkExtractMsg = document.getElementById('fork-extract-msg');
-const forkSubEl = document.getElementById('fork-sub');
 
 // Wire main-process stream sniffer (most reliable — intercepts at network level)
 if (bridge?.onForkStream) {
   bridge.onForkStream((url) => {
     if (forkState.active && !forkState.streamUrl && isStreamUrl(url)) {
-      setForkStep(3, 'done');
       onForkStreamFound(url);
     }
   });
@@ -2082,22 +2084,39 @@ let forkState = {
   networkListener: null
 };
 
-function setForkStep(stepNum, state = 'active') {
-  for (let i = 1; i <= 4; i++) {
-    const el = document.getElementById(`fstep-${i}`);
-    if (!el) continue;
-    el.className = 'fork-step';
-    if (i < stepNum) el.classList.add('done');
-    else if (i === stepNum) el.classList.add(state === 'error' ? 'error-step' : 'active');
+// --- Extract status UI (slim, inside player top-bar) ---
+const extractWrap = document.getElementById('p-extract-wrap');
+const extractTxt = document.getElementById('p-extract-txt');
+
+function showExtractStatus(msg) {
+  if (extractWrap) extractWrap.hidden = false;
+  if (extractTxt) extractTxt.textContent = msg;
+}
+
+function hideExtractStatus() {
+  if (extractWrap) extractWrap.hidden = true;
+}
+
+document.getElementById('p-extract-cancel')?.addEventListener('click', () => {
+  cancelSilentExtraction();
+});
+
+function cancelSilentExtraction() {
+  forkState.active = false;
+  forkState.streamUrl = null;
+  clearTimeout(forkState.timeout);
+  detachForkNetworkListener();
+  hideExtractStatus();
+  try { if (forkWebview) forkWebview.src = 'about:blank'; } catch {}
+  // If player is open and we have no stream yet, show error
+  if (P.open && !video.src) {
+    showVideoError('Stream extraction was cancelled. Try another source.');
   }
 }
 
-function setForkStatus(txt, state = 'loading') {
-  if (forkStatusEl) {
-    forkStatusEl.className = 'fork-status' + (state === 'done' ? ' done' : state === 'error' ? ' error' : '');
-  }
-  if (forkStatusTxt) forkStatusTxt.textContent = txt;
-}
+// No-op stubs kept for compatibility with any remaining calls
+function setForkStep() {}
+function setForkStatus() {}
 
 function isStreamUrl(url) {
   if (!url) return false;
@@ -2139,117 +2158,189 @@ function isAnikotoOrEmbedHost(url) {
   );
 }
 
-async function openForkOverlay(m, ep, sourceKey = 'anikoto') {
+/**
+ * startSilentExtraction — the new stream extraction flow.
+ * The webview runs completely off-screen (position: fixed; left: -9999px).
+ * A slim status indicator shows inside the player top bar.
+ * When a stream URL is found, it is loaded directly into the <video> element.
+ */
+async function startSilentExtraction(m, ep, sourceKey = 'anikoto') {
   forkState.sourceKey = sourceKey;
   const srcName = SOURCE_LABELS[sourceKey] || (sourceKey.charAt(0).toUpperCase() + sourceKey.slice(1));
 
-  if (!forkWebview) {
-    // Fallback: show prompt for URL
-    const url = prompt(`${srcName} Fork: Enter the direct stream URL for ${titleOf(m)} Episode ${ep}:`);
-    if (url) playEpisode(m, ep, null, url.trim());
-    return;
-  }
+  // Abort any in-progress extraction
+  cancelSilentExtraction();
 
   forkState.active = true;
   forkState.media = m;
   forkState.ep = ep;
   forkState.streamUrl = null;
 
-  // Fill in anime info
-  const coverEl = document.getElementById('fork-anime-cover');
-  const titleEl = document.getElementById('fork-anime-title');
-  const epEl = document.getElementById('fork-anime-ep');
-  if (coverEl) coverEl.style.backgroundImage = `url('${m.coverImage?.extraLarge || m.coverImage?.large || ''}')`;
-  if (titleEl) titleEl.textContent = titleOf(m);
-  if (epEl) epEl.textContent = `Episode ${ep}`;
-  if (forkSubEl) forkSubEl.textContent = `${titleOf(m)} · Episode ${ep} (${srcName})`;
+  // Open the player immediately with a "loading" state
+  P.open = true;
+  P.id = m.id;
+  P.media = m;
+  P.ep = ep;
+  P.file = null;
+  P.srcUrl = '';
 
-  // Update header branding / status labels
-  const logoEl = document.querySelector('.fork-header .fork-logo');
-  if (logoEl) logoEl.innerHTML = `${esc(srcName.toUpperCase())}<span>FORK</span>`;
-  const nowEl = document.querySelector('.fork-header .fork-now');
-  if (nowEl) nowEl.textContent = `Extracting stream from ${srcName}…`;
-  const revealBtn = document.getElementById('fork-reveal-btn');
-  if (revealBtn) revealBtn.textContent = `Show ${srcName} Page`;
-  const fstep1 = document.getElementById('fstep-1');
-  if (fstep1) fstep1.innerHTML = `<span class="fstep-dot"></span>Loading ${esc(srcName)} page`;
+  $('#p-name').textContent = titleOf(m);
+  $('#p-sub').textContent = `Episode ${ep} · ${srcName} — extracting stream…`;
+  $('#p-msg').hidden = false;
+  $('#p-msg').innerHTML = `
+    <div class="p-extracting">
+      <div class="p-ext-spinner"></div>
+      <div>
+        <div class="p-ext-title">Finding stream for ${esc(titleOf(m))} · Episode ${ep}…</div>
+        <div class="p-ext-sub" id="p-extract-api-status">Querying stream providers…</div>
+      </div>
+    </div>
+  `;
+  clearSubtitles();
+  player.hidden = false;
+  buildEpisodeList();
+  highlightEpisode();
+  syncVolume();
+  player.focus();
 
-  // Reset steps
-  setForkStep(1, 'active');
-  setForkStatus('Loading page…');
-  if (forkMask) { forkMask.classList.remove('transparent'); }
-  if (forkExtractMsg) forkExtractMsg.textContent = 'Locating video stream…';
+  showExtractStatus('Querying stream providers…');
 
-  // Remove any prior "found" banner
-  document.querySelector('.fork-stream-found')?.remove();
-  document.querySelector('.fork-stream-error')?.remove();
+  // ── Strategy 1: Direct API extraction (Anify → Consumet, no webview) ──
+  if (window.StreamProviders) {
+    try {
+      const title = m.title?.english || m.title?.romaji || '';
+      const apiResult = await window.StreamProviders.extract(
+        m.id,
+        title,
+        ep,
+        (msg) => {
+          showExtractStatus(msg);
+          const statusEl = document.getElementById('p-extract-api-status');
+          if (statusEl) statusEl.textContent = msg;
+        }
+      );
 
-  forkOverlay.hidden = false;
+      if (apiResult?.url && forkState.active) {
+        // Success — play directly
+        forkState.active = false;
+        forkState.streamUrl = apiResult.url;
+        hideExtractStatus();
 
-  // Build target source URL
-  const targetUrl = getEpisodeStreamUrl(sourceKey, m, ep);
-  if (forkUrlBar) forkUrlBar.textContent = targetUrl;
+        $('#p-msg').hidden = true;
+        loadVideoSrc(apiResult.url);
+        P.srcUrl = apiResult.url;
+        $('#p-sub').textContent = `Episode ${ep} · ${apiResult.provider}`;
 
-  // Set a timeout for 45 seconds
-  clearTimeout(forkState.timeout);
-  forkState.timeout = setTimeout(() => {
-    if (forkState.active && !forkState.streamUrl) {
-      setForkStatus('Auto-extract failed — interact with page', 'error');
-      setForkStep(3, 'error');
-      if (forkExtractMsg) forkExtractMsg.textContent = 'Could not auto-detect stream. Use the page below manually.';
-      // Reveal the webview so user can manually interact
-      if (forkMask) forkMask.classList.add('transparent');
-      appendForkError(`Stream not auto-detected. You can interact with the ${srcName} page directly, or click 'Enter URL manually'.`);
+        // Apply subtitles from provider if available
+        if (apiResult.subtitles?.length) {
+          const sub = apiResult.subtitles.find(s =>
+            /english/i.test(s.lang || '') || /en/i.test(s.lang || '')
+          ) || apiResult.subtitles[0];
+          if (sub?.url) {
+            try {
+              const subRes = await fetch(sub.url);
+              if (subRes.ok) {
+                const text = await subRes.text();
+                applySubtitleText(text);
+              }
+            } catch {}
+          }
+        }
+
+        // Restore saved position
+        const hist = getHistory()[m.id];
+        if (hist && hist.ep === ep && hist.time > 5 && hist.dur && hist.time < (hist.dur - 15)) {
+          const restoreTime = hist.time;
+          video.addEventListener('loadedmetadata', function onMeta() {
+            video.removeEventListener('loadedmetadata', onMeta);
+            video.currentTime = restoreTime;
+          }, { once: true });
+        }
+
+        const sel = document.getElementById('p-source-select');
+        if (sel && sourceKey) sel.value = sourceKey;
+        toast(`Stream found · ${apiResult.provider}`);
+        return; // Done — no webview needed
+      }
+    } catch (e) {
+      console.warn('[startSilentExtraction] API providers threw:', e);
     }
-  }, 45000);
+  }
 
-  // Auto-reveal webview after 12s so user can see what's loading
-  setTimeout(() => {
-    if (forkState.active && !forkState.streamUrl) {
-      if (forkMask) forkMask.classList.add('transparent');
-      if (forkExtractMsg) forkExtractMsg.textContent = 'Page loaded — monitoring for stream…';
-    }
-  }, 12000);
+  // ── Strategy 2: Webview sniffing fallback ──
+  if (!forkState.active) return; // Cancelled while API was running
 
-  // Listen for network requests in the webview
+  const statusEl = document.getElementById('p-extract-api-status');
+  if (statusEl) statusEl.textContent = `API unavailable — trying ${srcName} directly…`;
+  showExtractStatus(`Trying ${srcName} via browser…`);
+
+  // Update loading message for webview mode
+  $('#p-msg').innerHTML = `
+    <div class="p-extracting">
+      <div class="p-ext-spinner"></div>
+      <div>
+        <div class="p-ext-title">Extracting from ${esc(srcName)}…</div>
+        <div class="p-ext-sub">Loading streaming page — please wait…</div>
+      </div>
+    </div>
+  `;
+
+  if (!forkWebview) {
+    forkState.active = false;
+    hideExtractStatus();
+    showVideoError('No stream found and no webview available. Try another source.');
+    return;
+  }
+
+  // Start listening for streams from the background webview
   attachForkNetworkListener();
 
-  // Navigate the webview to the source
+  // Navigate the hidden webview to the streaming source
+  const targetUrl = getEpisodeStreamUrl(sourceKey, m, ep);
   try {
     forkWebview.src = targetUrl;
   } catch (e) {
-    console.warn('Fork webview src set failed:', e);
+    console.warn('[StreamExtract] Webview src set failed:', e);
   }
+
+  // Timeout: 45s — if nothing found, show error in player
+  clearTimeout(forkState.timeout);
+  forkState.timeout = setTimeout(() => {
+    if (forkState.active && !forkState.streamUrl) {
+      forkState.active = false;
+      detachForkNetworkListener();
+      hideExtractStatus();
+      try { if (forkWebview) forkWebview.src = 'about:blank'; } catch {}
+      showVideoError(`Couldn't auto-extract a stream from ${srcName} in time. Try a different source below, or paste a direct URL.`);
+      // Show source retry options in the error message
+      const msgEl = $('#p-msg');
+      if (msgEl) {
+        const existingBtns = msgEl.querySelector('.src-retry-row');
+        if (!existingBtns) {
+          const row = document.createElement('div');
+          row.className = 'src-retry-row';
+          row.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:center;';
+          Object.keys(SOURCE_LABELS).filter(k => k !== sourceKey).forEach(key => {
+            const btn = document.createElement('button');
+            btn.className = 'btn small';
+            btn.textContent = `${SOURCE_ICONS[key]} ${SOURCE_LABELS[key]}`;
+            btn.onclick = () => {
+              if (P.media) startSilentExtraction(P.media, P.ep, key);
+            };
+            row.appendChild(btn);
+          });
+          msgEl.appendChild(row);
+        }
+      }
+    }
+  }, 45000);
 }
 
-function appendForkFound(url) {
-  const info = document.querySelector('.fork-anime-info');
-  if (!info) return;
-  document.querySelector('.fork-stream-found')?.remove();
-  document.querySelector('.fork-stream-error')?.remove();
-  const el = document.createElement('div');
-  el.className = 'fork-stream-found';
-  el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Stream found! Loading player…`;
-  info.appendChild(el);
-}
-
-function appendForkError(msg) {
-  const info = document.querySelector('.fork-anime-info');
-  if (!info) return;
-  document.querySelector('.fork-stream-error')?.remove();
-  const el = document.createElement('div');
-  el.className = 'fork-stream-error';
-  el.textContent = msg;
-  info.appendChild(el);
-}
+// Compatibility alias — old code that called openForkOverlay still works
+const openForkOverlay = startSilentExtraction;
 
 function closeForkOverlay() {
-  forkState.active = false;
-  forkState.streamUrl = null;
-  clearTimeout(forkState.timeout);
-  detachForkNetworkListener();
-  if (forkOverlay) forkOverlay.hidden = true;
-  try { if (forkWebview) forkWebview.src = 'about:blank'; } catch {}
+  cancelSilentExtraction();
 }
 
 function onForkStreamFound(url) {
@@ -2257,23 +2348,32 @@ function onForkStreamFound(url) {
   forkState.streamUrl = url;
   clearTimeout(forkState.timeout);
 
-  console.log('[Anikoto Fork] Stream captured:', url);
+  console.log('[StreamExtract] Stream captured:', url);
 
-  setForkStep(4, 'active');
-  setForkStatus('Stream found!', 'done');
-  appendForkFound(url);
-  if (forkExtractMsg) forkExtractMsg.textContent = '✓ Stream extracted!';
+  forkState.active = false;
+  detachForkNetworkListener();
+  hideExtractStatus();
+  try { if (forkWebview) forkWebview.src = 'about:blank'; } catch {}
 
-  // Brief delay so user can see the "found" state, then launch native player
-  setTimeout(() => {
-    const { media, ep, sourceKey } = forkState;
-    closeForkOverlay();
-    if (media) {
-      playEpisode(media, ep, null, url);
-      const sel = document.getElementById('p-source-select');
-      if (sel && sourceKey) sel.value = sourceKey;
+  const { media, ep, sourceKey } = forkState;
+  if (media) {
+    // Hide the extracting message and play
+    $('#p-msg').hidden = true;
+    loadVideoSrc(url);
+    P.srcUrl = url;
+    $('#p-sub').textContent = `Episode ${ep} · ${SOURCE_LABELS[sourceKey] || sourceKey} · Stream`;
+    const hist = getHistory()[media.id];
+    if (hist && hist.ep === ep && hist.time > 5 && hist.dur && hist.time < (hist.dur - 15)) {
+      const restoreTime = hist.time;
+      video.addEventListener('loadedmetadata', function onMeta() {
+        video.removeEventListener('loadedmetadata', onMeta);
+        video.currentTime = restoreTime;
+      }, { once: true });
     }
-  }, 900);
+    const sel = document.getElementById('p-source-select');
+    if (sel && sourceKey) sel.value = sourceKey;
+    toast(`Stream found from ${SOURCE_LABELS[sourceKey] || sourceKey}!`);
+  }
 }
 
 function attachForkNetworkListener() {
@@ -2422,42 +2522,11 @@ function detachForkNetworkListener() {
   forkState.networkListener = null;
 }
 
-// Fork UI button wiring
-document.getElementById('fork-cancel')?.addEventListener('click', () => {
-  closeForkOverlay();
-});
-
-document.getElementById('fork-manual-url')?.addEventListener('click', () => {
-  const m = forkState.media;
-  const ep = forkState.ep;
-  closeForkOverlay();
-  const url = prompt(`Paste direct video stream URL for Episode ${ep}:`);
-  if (url?.trim() && m) playEpisode(m, ep, null, url.trim());
-});
-
-document.getElementById('fork-reveal-btn')?.addEventListener('click', () => {
-  const mask = document.getElementById('fork-webview-mask');
-  const btn = document.getElementById('fork-reveal-btn');
-  if (mask) {
-    mask.classList.toggle('transparent');
-    if (btn) btn.textContent = mask.classList.contains('transparent') ? 'Hide Anikoto Page' : 'Show Anikoto Page';
-  }
-});
-
-document.getElementById('fork-show-browser')?.addEventListener('click', () => {
-  const mask = document.getElementById('fork-webview-mask');
-  if (mask) mask.classList.toggle('transparent');
-});
-
-// Override playEpisode to intercept Anikoto source
-const _origPlayEpisode = playEpisode;
-
-// Patch the source select to trigger fork mode
+// Patch the source select to trigger silent extraction with the chosen source
 document.getElementById('p-source-select')?.addEventListener('change', (e) => {
   const val = e.target.value;
   if (P.media) {
-    // Re-open fork overlay for current playing with the chosen source
-    openForkOverlay(P.media, P.ep, val);
+    startSilentExtraction(P.media, P.ep, val);
   }
 });
 
@@ -2465,7 +2534,7 @@ document.getElementById('p-source-select')?.addEventListener('change', (e) => {
 document.getElementById('p-reload')?.addEventListener('click', () => {
   if (P.media) {
     const val = document.getElementById('p-source-select')?.value || 'anikoto';
-    openForkOverlay(P.media, P.ep, val);
+    startSilentExtraction(P.media, P.ep, val);
   }
 });
 

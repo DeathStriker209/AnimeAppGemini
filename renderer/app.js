@@ -81,7 +81,9 @@ function snap(m) {
     episodes: m.episodes,
     seasonYear: m.seasonYear,
     averageScore: m.averageScore,
-    genres: m.genres
+    genres: m.genres,
+    nextAiringEpisode: m.nextAiringEpisode,
+    _allAnimeEpCount: m._allAnimeEpCount
   };
 }
 
@@ -122,34 +124,34 @@ function openExternal(url) {
 }
 
 const SOURCE_LABELS = {
-  anikoto: 'Anikoto TV',
+  allanime: 'AllAnime',
+  allanime_dub: 'AllAnime (Dub)',
   miruro: 'Miruro',
   animepahe: 'AnimePahe',
-  animekai: 'AnimeKai',
   hianime: 'HiAnime'
 };
 
 const SOURCE_ICONS = {
-  anikoto: '📡',
-  miruro: '⚡',
+  allanime: '⚡',
+  allanime_dub: '🎙️',
+  miruro: '🪞',
   animepahe: '🌸',
-  animekai: '⚔️',
   hianime: '📺'
 };
 
 const SOURCE_DESCS = {
-  anikoto: 'Auto stream extraction · best quality',
-  miruro: 'Fast multi-server · clean player',
-  animepahe: 'Fast CDN · quality streams',
-  animekai: 'HD stream · animekai.to',
-  hianime: 'Sub & Dub catalog'
+  allanime: 'Direct API · fast · sub',
+  allanime_dub: 'Direct API · fast · dub',
+  miruro: 'Miruro embed player',
+  animepahe: 'AnimePahe CDN',
+  hianime: 'HiAnime sub & dub'
 };
 
 const DEFAULT_SOURCES = [
-  { name: 'Anikoto TV', url: 'https://anikototv.to/watch/{slug}?ep={ep}', id: 'anikoto' },
+  { name: 'AllAnime (Sub)', url: '', id: 'allanime' },
+  { name: 'AllAnime (Dub)', url: '', id: 'allanime_dub' },
   { name: 'Miruro', url: 'https://www.miruro.tv/watch?id={id}&ep={ep}', id: 'miruro' },
   { name: 'AnimePahe', url: 'https://animepahe.ru/api?m=search&q={title}', id: 'animepahe' },
-  { name: 'AnimeKai', url: 'https://animekai.to/browser?keyword={title}', id: 'animekai' },
   { name: 'HiAnime', url: 'https://hianime.to/search?keyword={title}', id: 'hianime' }
 ];
 
@@ -164,23 +166,16 @@ function toSlug(str) {
 
 const getSources = () => {
   const raw = store.get('sources', DEFAULT_SOURCES);
-  // Ensure Crunchyroll is removed everywhere as requested
   const filtered = Array.isArray(raw)
-    ? raw.filter((s) => s && !/crunchyroll/i.test(s.name || '') && !/crunchyroll\.com/i.test(s.url || ''))
+    ? raw.filter((s) => s && !/crunchyroll/i.test(s.name || '') && !/anikoto/i.test(s.name || '') && !/animekai/i.test(s.name || ''))
     : DEFAULT_SOURCES;
 
-  // Make sure default streaming sources are available
-  if (!filtered.some((s) => /anikoto/i.test(s.name || ''))) {
-    filtered.unshift({ name: 'Anikoto TV', url: 'https://anikototv.to/watch/{slug}?ep={ep}', id: 'anikoto' });
+  // Ensure AllAnime is always at the top
+  if (!filtered.some((s) => s.id === 'allanime')) {
+    filtered.unshift({ name: 'AllAnime (Sub)', url: '', id: 'allanime' });
   }
-  if (!filtered.some((s) => /miruro/i.test(s.name || ''))) {
-    filtered.splice(1, 0, { name: 'Miruro', url: 'https://www.miruro.tv/watch?id={id}&ep={ep}', id: 'miruro' });
-  }
-  if (!filtered.some((s) => /animepahe/i.test(s.name || ''))) {
-    filtered.splice(2, 0, { name: 'AnimePahe', url: 'https://animepahe.ru/api?m=search&q={title}', id: 'animepahe' });
-  }
-  if (!filtered.some((s) => /animekai/i.test(s.name || ''))) {
-    filtered.splice(3, 0, { name: 'AnimeKai', url: 'https://animekai.to/browser?keyword={title}', id: 'animekai' });
+  if (!filtered.some((s) => s.id === 'allanime_dub')) {
+    filtered.splice(1, 0, { name: 'AllAnime (Dub)', url: '', id: 'allanime_dub' });
   }
   return filtered;
 };
@@ -224,7 +219,7 @@ function getEpisodeStreamUrl(sourceKey, m, ep = 1) {
   if (found) {
     return sourceURL(found, m, ep);
   }
-  return `https://anikototv.to/watch/${slug}?ep=${ep}`;
+  return `https://hianime.to/search?keyword=${encodeURIComponent(preferredTitle)}`;
 }
 
 const getHistory = () => store.get('history', {});
@@ -236,6 +231,7 @@ const getLibrary = () => store.get('library', {});
 const CARD = `fragment card on Media {
   id title { romaji english } coverImage { large extraLarge color } bannerImage
   averageScore episodes format genres seasonYear status
+  nextAiringEpisode { episode airingAt }
 }`;
 
 const gqlCache = new Map();
@@ -1067,7 +1063,7 @@ const VIEWS = {
 
           <div class="d-section" style="margin-top: 32px;">
             <h2>Episodes</h2>
-            <div class="d-sub">${linkedCount ? `${linkedCount} local video(s) linked on disk` : 'Select an episode below to choose your streaming source (Anikoto, Miruro, AnimePahe, AnimeKai, etc.).'}</div>
+            <div class="d-sub">${linkedCount ? `${linkedCount} local video(s) linked on disk` : 'Click any episode to stream instantly via AllAnime — or pick another source in the player.'}</div>
             <div id="ep-area">${episodesHTML(m)}</div>
           </div>
         </div>
@@ -1240,19 +1236,47 @@ function initHeroSlider() {
 }
 
 function episodeCount(m) {
-  return m.episodes || 12;
+  // For ongoing/airing shows, AniList returns null for episodes.
+  // Use the AllAnime-resolved count if available, else use nextAiringEpisode,
+  // else use a large sentinel so episode tiles render for all known eps.
+  if (m.episodes) return m.episodes;
+  // Use cached AllAnime episode count if we resolved it
+  if (m._allAnimeEpCount) return m._allAnimeEpCount;
+  // For airing shows, use nextAiringEpisode - 1 as a floor
+  if (m.nextAiringEpisode?.episode) return m.nextAiringEpisode.episode - 1;
+  // fallback: 24 (better than 12)
+  return 24;
 }
 
-function episodesHTML(m) {
+function episodesHTML(m, pageStart = 1) {
   const total = episodeCount(m);
+  const PAGE_SIZE = 100;
   const localFiles = getLibrary()[m.id]?.files || [];
   const fileMap = new Map();
   localFiles.forEach((f) => fileMap.set(f.ep, f));
   const hist = getHistory()[m.id];
-  let tiles = '';
   const cover = m.bannerImage || m.coverImage?.extraLarge || m.coverImage?.large || '';
 
-  for (let n = 1; n <= total; n++) {
+  // Build page range buttons for long shows
+  let pageNav = '';
+  if (total > PAGE_SIZE) {
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const currentPage = Math.ceil(pageStart / PAGE_SIZE);
+    pageNav = `<div class="ep-pages">`;
+    for (let p = 0; p < totalPages; p++) {
+      const from = p * PAGE_SIZE + 1;
+      const to = Math.min((p + 1) * PAGE_SIZE, total);
+      const active = p + 1 === currentPage ? ' active' : '';
+      pageNav += `<button class="ep-page-btn${active}" data-nav data-action="ep-page" data-id="${m.id}" data-from="${from}">${from}–${to}</button>`;
+    }
+    pageNav += `</div>`;
+  }
+
+  const rangeStart = pageStart;
+  const rangeEnd = Math.min(pageStart + PAGE_SIZE - 1, total);
+
+  let tiles = '';
+  for (let n = rangeStart; n <= rangeEnd; n++) {
     const local = fileMap.get(n);
     const isLocal = !!local;
     const badge = isLocal ? 'ON DISK' : `EP ${n}`;
@@ -1272,7 +1296,7 @@ function episodesHTML(m) {
       </div>
     `;
   }
-  return `<div class="ep-grid">${tiles}</div>`;
+  return `${pageNav}<div class="ep-grid">${tiles}</div>`;
 }
 
 /* =========================================================
@@ -1346,9 +1370,9 @@ async function playEpisode(m, ep = 1, file = null, customUrl = null) {
     file = localList.find((f) => f.ep === ep) || null;
   }
 
-  // If there is no local file and no custom URL, prompt the user with choices
+  // If there is no local file and no custom URL, start AllAnime extraction directly
   if (!file && !customUrl) {
-    showPlayPromptModal(m, ep);
+    startSilentExtraction(m, ep, 'allanime');
     return;
   }
 
@@ -1789,6 +1813,14 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  if (action === 'ep-page') {
+    const from = Number(t.dataset.from || 1);
+    const m = mediaById.get(id) || state.detail;
+    const epArea = document.getElementById('ep-area');
+    if (epArea && m) epArea.innerHTML = episodesHTML(m, from);
+    return;
+  }
+
   if (action === 'day') {
     return go('schedule', { day: Number(t.dataset.day || 0) });
   }
@@ -2209,6 +2241,7 @@ async function startSilentExtraction(m, ep, sourceKey = 'anikoto') {
   if (window.StreamProviders) {
     try {
       const title = m.title?.english || m.title?.romaji || '';
+      const preferMode = sourceKey === 'allanime_dub' ? 'dub' : 'sub';
       const apiResult = await window.StreamProviders.extract(
         m.id,
         title,
@@ -2217,7 +2250,8 @@ async function startSilentExtraction(m, ep, sourceKey = 'anikoto') {
           showExtractStatus(msg);
           const statusEl = document.getElementById('p-extract-api-status');
           if (statusEl) statusEl.textContent = msg;
-        }
+        },
+        preferMode
       );
 
       if (apiResult?.url && forkState.active) {
@@ -2259,6 +2293,15 @@ async function startSilentExtraction(m, ep, sourceKey = 'anikoto') {
 
         const sel = document.getElementById('p-source-select');
         if (sel && sourceKey) sel.value = sourceKey;
+
+        // Update episode count from AllAnime result for ongoing shows
+        if (apiResult._allAnimeEpCount && !m.episodes) {
+          m._allAnimeEpCount = apiResult._allAnimeEpCount;
+          P.media._allAnimeEpCount = apiResult._allAnimeEpCount;
+          // Refresh episode list with real count
+          buildEpisodeList();
+        }
+
         toast(`Stream found · ${apiResult.provider}`);
         return; // Done — no webview needed
       }
@@ -2533,7 +2576,7 @@ document.getElementById('p-source-select')?.addEventListener('change', (e) => {
 // Reload stream button in player topbar
 document.getElementById('p-reload')?.addEventListener('click', () => {
   if (P.media) {
-    const val = document.getElementById('p-source-select')?.value || 'anikoto';
+    const val = document.getElementById('p-source-select')?.value || 'allanime';
     startSilentExtraction(P.media, P.ep, val);
   }
 });
@@ -2541,7 +2584,7 @@ document.getElementById('p-reload')?.addEventListener('click', () => {
 // Open external watch in browser
 document.getElementById('p-ext')?.addEventListener('click', () => {
   if (P.media) {
-    const val = document.getElementById('p-source-select')?.value || 'anikoto';
+    const val = document.getElementById('p-source-select')?.value || 'allanime';
     const url = getEpisodeStreamUrl(val, P.media, P.ep);
     if (url) openExternal(url);
   }
